@@ -31,11 +31,18 @@ python tests/test_flash_mla_sm90.py --dtype fp16
 
 Note that sm80, sm86, and sm89 only support bfloat16 data type, while sm90 supports both bfloat16 and float16.
 
-### Memory Considerations
+### Memory and Cache Considerations
 
-- sm80 (A100) implementation uses larger block sizes and more warps, suitable for datacenter GPUs with large VRAM.
-- sm86 (RTX 30xx) implementation uses smaller block sizes and fewer warps to accommodate consumer GPUs with less VRAM.
-- sm89 (RTX 40xx) implementation uses medium block sizes, suitable for newer consumer GPUs with moderate VRAM.
+- sm80 (A100) implementation uses larger block sizes (64x32), more warps (4), and full dimensions (576/512), suitable for datacenter GPUs with large VRAM and cache.
+- sm86 (RTX 30xx) implementation uses extremely small block sizes (16x16), minimal warps (1), and reduced dimensions (288/256) to accommodate consumer GPUs with very limited cache.
+- sm89 (RTX 40xx) implementation also uses extremely small block sizes (16x16), minimal warps (1), and reduced dimensions (288/256), as even these newer consumer GPUs have very limited cache compared to datacenter GPUs.
+
+The test parameters for sm86 and sm89 have also been drastically reduced (smaller batch sizes, shorter sequences, fewer heads, reduced dimensions) to ensure the tests can run on consumer hardware.
+
+### Dimension Differences
+
+- sm80 and sm90: Head dimension = 576, Output dimension = 512
+- sm86 and sm89: Head dimension = 288, Output dimension = 256 (reduced by half)
 
 ## Test Parameters
 

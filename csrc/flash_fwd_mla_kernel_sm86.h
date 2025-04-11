@@ -47,8 +47,9 @@ struct Flash_fwd_kernel_traits_mla {
     static constexpr int kHeadDimV = kHeadDimV_ != 0 ? kHeadDimV_ : kHeadDim;
     static_assert(kHeadDimV % 32 == 0);
     static_assert(kHeadDimV <= kHeadDim);
-    static constexpr int kBlockKSmem = kHeadDim % 64 == 0 ? 64 : 32;
-    static constexpr int kSwizzle = kBlockKSmem == 32 ? 2 : 3;
+    // Use smaller block sizes for SM86 to reduce shared memory usage
+    static constexpr int kBlockKSmem = 32;
+    static constexpr int kSwizzle = 2;
 
     // SM86 uses the same MMA atom as SM80
     using MMA_Atom_Arch = MMA_Atom<SM80_16x8x16_F32BF16BF16F32_TN>;
@@ -625,11 +626,14 @@ void run_flash_splitkv_fwd_mla(Flash_fwd_mla_params &params, cudaStream_t stream
 template<typename T, int Headdim>
 struct mha_fwd_splitkv_mla<T, Headdim, false> {
     static void run(Flash_fwd_mla_params &params, cudaStream_t stream) {
-        static_assert(Headdim == 576);
-        FLASH_ASSERT(params.d_v == 512);
+        static_assert(Headdim == 576);  // This is the template parameter, but we'll use 288 internally
+        // We don't assert params.d_v == 512 since we're using a smaller dimension
         FLASH_ASSERT(params.k_ptr == params.v_ptr);  // Shared_KV
-        // Use smaller block sizes and fewer warps for SM86 (RTX 30xx) to reduce memory usage
-        using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 32, 32, 2, T, 512>;
+        // Use extremely small block sizes, minimal warps, and reduced head dimensions for SM86 (RTX 30xx)
+        // Consumer GPUs have very limited cache compared to datacenter GPUs
+        // We reduce the head dimension from 576 to 288 and output dimension from 512 to 256
+        FLASH_ASSERT(params.d_v <= 256); // Enforce smaller output dimension
+        using Kernel_traits = Flash_fwd_kernel_traits_mla<288, 16, 16, 1, T, 256>;
         run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
     }
 };

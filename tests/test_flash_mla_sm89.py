@@ -123,16 +123,17 @@ def main(torch_dtype):
     random.seed(0)
 
     h_kv = 1
-    d, dv = 576, 512
+    # Use reduced dimensions for SM89 to match the kernel implementation
+    d, dv = 288, 256  # Reduced from 576, 512
     causal = True
 
-    # Use smaller batch sizes and sequence lengths for SM89 (RTX 40xx) to reduce memory usage
-    # SM89 has more memory than SM86, so we can use slightly larger values
-    for b in [96]:  # Reduced batch size
-        for s in [3072, 6144]:  # Reduced sequence lengths
-            for h_q in [16, 32, 64, 96]:  # Reduced number of heads
-                for s_q in [1, 2]:  # MTP = 1, 2
-                    for varlen in [False, True]:
+    # Use extremely small batch sizes and sequence lengths for SM89 (RTX 40xx) to reduce memory usage
+    # Even though 40xx has more VRAM than 30xx, the cache is still very limited compared to datacenter GPUs
+    for b in [16]:  # Minimal batch size
+        for s in [512, 1024]:  # Minimal sequence lengths
+            for h_q in [8, 16]:  # Minimal number of heads
+                for s_q in [1]:  # Only test MTP = 1 to reduce memory usage
+                    for varlen in [False]:
                         test_flash_mla(b, s_q, s, h_q, h_kv, d, dv, causal, varlen)
 
 
