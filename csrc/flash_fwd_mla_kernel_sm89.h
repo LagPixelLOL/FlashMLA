@@ -634,8 +634,52 @@ struct mha_fwd_splitkv_mla<T, Headdim, false> {
         FLASH_ASSERT(params.d_v == 512);
         FLASH_ASSERT(params.k_ptr == params.v_ptr);  // Shared_KV
 
-        // For SM89 (RTX 40xx) with limited cache, we use smaller block sizes and fewer warps
-        using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 1, T, 512>;
-        run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
+        // Check if we're using causal attention
+        if (params.causal) {
+            // For causal attention, we can safely chunk along the sequence dimension
+            // This is because each position only attends to previous positions
+
+            // Save original parameters
+            void* original_q_ptr = params.q_ptr;
+            void* original_k_ptr = params.k_ptr;
+            void* original_o_ptr = params.o_ptr;
+            float* original_lse_ptr = params.lse_ptr;
+            int original_seqlen_q = params.seqlen_q;
+            int original_seqlen_k = params.seqlen_k;
+
+            // Define chunk size for sequence dimension
+            const int kChunkSize = 256;  // Process 256 tokens at a time
+
+            // Process each chunk of the query sequence
+            for (int q_start = 0; q_start < original_seqlen_q; q_start += kChunkSize) {
+                int q_chunk_size = std::min(kChunkSize, original_seqlen_q - q_start);
+
+                // Update query pointer and sequence length
+                params.q_ptr = static_cast<T*>(original_q_ptr) + q_start * params.h * params.d;
+                params.seqlen_q = q_chunk_size;
+                params.o_ptr = static_cast<T*>(original_o_ptr) + q_start * params.h * params.d_v;
+                params.lse_ptr = original_lse_ptr + q_start * params.h;
+
+                // For causal attention, we only need to process up to the current chunk end
+                params.seqlen_k = std::min(original_seqlen_k, q_start + q_chunk_size);
+
+                // Run the kernel with smaller dimensions that are multiples of 8
+                using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 2, T, 512>;
+                run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
+            }
+
+            // Restore original parameters
+            params.q_ptr = original_q_ptr;
+            params.k_ptr = original_k_ptr;
+            params.o_ptr = original_o_ptr;
+            params.lse_ptr = original_lse_ptr;
+            params.seqlen_q = original_seqlen_q;
+            params.seqlen_k = original_seqlen_k;
+        } else {
+            // For non-causal attention, we can't chunk safely, so we process the whole sequence
+            // Use dimensions that are multiples of 8 to avoid static shape division errors
+            using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 2, T, 512>;
+            run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
+        }
     }
 };

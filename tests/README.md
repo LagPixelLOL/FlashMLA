@@ -41,12 +41,21 @@ The test parameters for sm86 and sm89 have also been drastically reduced (smalle
 
 ### Optimizations for Consumer GPUs
 
-To maintain compatibility with models like DeepSeek V3 and R1 while working within the cache constraints of consumer GPUs, the sm86 and sm89 implementations use smaller block sizes and fewer warps:
+To maintain compatibility with models like DeepSeek V3 and R1 while working within the cache constraints of consumer GPUs, the sm86 and sm89 implementations use several optimizations:
 
-1. Block size reduced from 64x32 to 16x16 (75% reduction)
-2. Warps reduced from 4 to 1 (75% reduction)
-3. Pipeline depth reduced to save shared memory
-4. Added `--expt-relaxed-constexpr` flag to allow certain CUDA code patterns
+1. **Sequence Chunking for Causal Attention**:
+   - For causal attention, the sequence is processed in chunks of 256 tokens
+   - Each chunk only attends to itself and previous chunks (causal masking)
+   - This significantly reduces memory usage for long sequences
+
+2. **Smaller Processing Units**:
+   - Block size reduced from 64x32 to 16x16 (75% reduction)
+   - Warps increased from 1 to 2 to ensure dimensions are multiples of 8
+   - Pipeline depth reduced to save shared memory
+
+3. **Compilation Fixes**:
+   - Added `--expt-relaxed-constexpr` flag to allow certain CUDA code patterns
+   - Ensured all dimensions are compatible with CUDA's static shape division requirements
 
 These optimizations allow the kernel to run on consumer GPUs with limited cache while still maintaining compatibility with models that expect the full dimensions (576/512).
 
