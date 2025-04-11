@@ -83,12 +83,12 @@ if(CSRC_SOURCES_SM80)
 endif()
 
 if(CSRC_SOURCES_SM86)
-    set_source_files_properties(${CSRC_SOURCES_SM86} PROPERTIES COMPILE_FLAGS "-arch=sm_86")
+    set_source_files_properties(${CSRC_SOURCES_SM86} PROPERTIES COMPILE_FLAGS "-arch=sm_86 --expt-relaxed-constexpr")
     target_sources(csrc PRIVATE ${CSRC_SOURCES_SM86})
 endif()
 
 if(CSRC_SOURCES_SM89)
-    set_source_files_properties(${CSRC_SOURCES_SM89} PROPERTIES COMPILE_FLAGS "-arch=sm_89")
+    set_source_files_properties(${CSRC_SOURCES_SM89} PROPERTIES COMPILE_FLAGS "-arch=sm_89 --expt-relaxed-constexpr")
     target_sources(csrc PRIVATE ${CSRC_SOURCES_SM89})
 endif()
 

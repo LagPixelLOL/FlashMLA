@@ -4,6 +4,7 @@
 #include <cutlass/cutlass.h>
 #include <cutlass/array.h>
 #include <cutlass/numeric_types.h>
+#include <algorithm>  // for std::min
 
 using namespace cute;
 
@@ -633,50 +634,8 @@ struct mha_fwd_splitkv_mla<T, Headdim, false> {
         FLASH_ASSERT(params.d_v == 512);
         FLASH_ASSERT(params.k_ptr == params.v_ptr);  // Shared_KV
 
-        // For SM86 (RTX 30xx) with limited cache, we process in chunks
-        // We split the head dimension into smaller chunks (192 instead of 576)
-        // and process each chunk separately
-        constexpr int kChunkSize = 192;  // Process 1/3 of the head dimension at a time
-        constexpr int kNumChunks = Headdim / kChunkSize;  // 3 chunks
-
-        // Save original parameters
-        void* original_q_ptr = params.q_ptr;
-        void* original_k_ptr = params.k_ptr;
-        void* original_o_ptr = params.o_ptr;
-        int original_d = params.d;
-        int original_d_v = params.d_v;
-
-        // Temporary output buffer for chunks
-        void* temp_output = nullptr;
-        cudaMalloc(&temp_output, params.b * params.h * params.seqlen_q * params.d_v * sizeof(T));
-
-        // Process each chunk
-        for (int chunk = 0; chunk < kNumChunks; ++chunk) {
-            // Update parameters for this chunk
-            params.q_ptr = static_cast<T*>(original_q_ptr) + chunk * kChunkSize;
-            params.k_ptr = static_cast<T*>(original_k_ptr) + chunk * kChunkSize;
-            params.o_ptr = static_cast<T*>(temp_output) + chunk * (original_d_v / kNumChunks);
-            params.d = kChunkSize;
-            params.d_v = original_d_v / kNumChunks;
-
-            // Run the kernel with smaller dimensions
-            using Kernel_traits = Flash_fwd_kernel_traits_mla<kChunkSize, 16, 16, 1, T, original_d_v / kNumChunks>;
-            run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
-        }
-
-        // Copy results from temp buffer to output
-        cudaMemcpyAsync(original_o_ptr, temp_output,
-                        params.b * params.h * params.seqlen_q * original_d_v * sizeof(T),
-                        cudaMemcpyDeviceToDevice, stream);
-
-        // Free temporary buffer
-        cudaFree(temp_output);
-
-        // Restore original parameters
-        params.q_ptr = original_q_ptr;
-        params.k_ptr = original_k_ptr;
-        params.o_ptr = original_o_ptr;
-        params.d = original_d;
-        params.d_v = original_d_v;
+        // For SM86 (RTX 30xx) with limited cache, we use smaller block sizes and fewer warps
+        using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 1, T, 512>;
+        run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
     }
 };

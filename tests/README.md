@@ -39,16 +39,16 @@ Note that sm80, sm86, and sm89 only support bfloat16 data type, while sm90 suppo
 
 The test parameters for sm86 and sm89 have also been drastically reduced (smaller batch sizes, shorter sequences, fewer heads) to ensure the tests can run on consumer hardware.
 
-### Chunking for Consumer GPUs
+### Optimizations for Consumer GPUs
 
-To maintain compatibility with models like DeepSeek V3 and R1 while working within the cache constraints of consumer GPUs, the sm86 and sm89 implementations use a chunking approach:
+To maintain compatibility with models like DeepSeek V3 and R1 while working within the cache constraints of consumer GPUs, the sm86 and sm89 implementations use smaller block sizes and fewer warps:
 
-1. The full head dimension (576) is split into 3 chunks of 192 each
-2. The output dimension (512) is split into 3 chunks of ~170 each
-3. Each chunk is processed separately with smaller block sizes (16x16) and fewer warps (1)
-4. The results are combined at the end
+1. Block size reduced from 64x32 to 16x16 (75% reduction)
+2. Warps reduced from 4 to 1 (75% reduction)
+3. Pipeline depth reduced to save shared memory
+4. Added `--expt-relaxed-constexpr` flag to allow certain CUDA code patterns
 
-This approach allows the kernel to run on consumer GPUs with limited cache while still maintaining compatibility with models that expect the full dimensions.
+These optimizations allow the kernel to run on consumer GPUs with limited cache while still maintaining compatibility with models that expect the full dimensions (576/512).
 
 ## Test Parameters
 

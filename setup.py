@@ -100,10 +100,10 @@ def _write_ninja_file(path,
         cuda_post_cflags_sm80 = ['-gencode', 'arch=compute_80,code=sm_80']
         flags.append(f'cuda_post_cflags_sm80 = {" ".join(cuda_post_cflags_sm80)}')
 
-        cuda_post_cflags_sm86 = ['-gencode', 'arch=compute_86,code=sm_86']
+        cuda_post_cflags_sm86 = ['-gencode', 'arch=compute_86,code=sm_86', '--expt-relaxed-constexpr']
         flags.append(f'cuda_post_cflags_sm86 = {" ".join(cuda_post_cflags_sm86)}')
 
-        cuda_post_cflags_sm89 = ['-gencode', 'arch=compute_89,code=sm_89']
+        cuda_post_cflags_sm89 = ['-gencode', 'arch=compute_89,code=sm_89', '--expt-relaxed-constexpr']
         flags.append(f'cuda_post_cflags_sm89 = {" ".join(cuda_post_cflags_sm89)}')
 
         cuda_post_cflags_sm80_sm90 = cuda_post_cflags_sm80 + cuda_post_cflags_sm90
