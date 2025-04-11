@@ -111,10 +111,11 @@ if __name__ == "__main__":
     d, dv = 576, 512
     causal = True
 
+    # Use smaller batch sizes and sequence lengths for SM86 (RTX 30xx) to reduce memory usage
     # test_flash_mla(32, 2, 4096, 16, 1, d, dv, True, True)
-    for b in [128]:
-        for s in [4096, 8192]:
-            for h_q in [16, 32, 64, 128]:  # TP = 8, 4, 2, 1
+    for b in [64]:  # Reduced batch size
+        for s in [2048, 4096]:  # Reduced sequence lengths
+            for h_q in [16, 32, 64]:  # Reduced number of heads
                 for s_q in [1, 2]:  # MTP = 1, 2
                     for varlen in [False, True]:
                         test_flash_mla(b, s_q, s, h_q, h_kv, d, dv, causal, varlen)

@@ -30,6 +30,7 @@ constexpr auto getSmemLayoutK() {
 
 template<int kHeadDim_, int kBlockM_, int kBlockN_, int kNWarps_, typename elem_type=cutlass::bfloat16_t, int kHeadDimV_ = 0>
 struct Flash_fwd_kernel_traits_mla {
+    // SM86 (RTX 30xx) has less memory than SM80 datacenter GPUs, so we use smaller blocks
     using Element = elem_type;
     using ElementAccum = float;
     using index_t = int64_t;
@@ -627,7 +628,8 @@ struct mha_fwd_splitkv_mla<T, Headdim, false> {
         static_assert(Headdim == 576);
         FLASH_ASSERT(params.d_v == 512);
         FLASH_ASSERT(params.k_ptr == params.v_ptr);  // Shared_KV
-        using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 64, 32, 4, T, 512>;
+        // Use smaller block sizes and fewer warps for SM86 (RTX 30xx) to reduce memory usage
+        using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 32, 32, 2, T, 512>;
         run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
     }
 };

@@ -126,9 +126,11 @@ def main(torch_dtype):
     d, dv = 576, 512
     causal = True
 
-    for b in [128]:
-        for s in [4096, 8192]:
-            for h_q in [16, 32, 64, 128]:  # TP = 8, 4, 2, 1
+    # Use smaller batch sizes and sequence lengths for SM89 (RTX 40xx) to reduce memory usage
+    # SM89 has more memory than SM86, so we can use slightly larger values
+    for b in [96]:  # Reduced batch size
+        for s in [3072, 6144]:  # Reduced sequence lengths
+            for h_q in [16, 32, 64, 96]:  # Reduced number of heads
                 for s_q in [1, 2]:  # MTP = 1, 2
                     for varlen in [False, True]:
                         test_flash_mla(b, s_q, s, h_q, h_kv, d, dv, causal, varlen)
@@ -146,5 +148,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     torch_dtype = torch.bfloat16
-    
+
     main(torch_dtype)
