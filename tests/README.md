@@ -48,16 +48,16 @@ To maintain compatibility with models like DeepSeek V3 and R1 while working with
    - Each chunk only attends to itself and previous tokens (causal masking)
    - This significantly reduces memory usage for long sequences
 
-2. **Smaller Processing Units**:
-   - Block size reduced from 64x32 to 16x16 (75% reduction)
-   - Warps set to 2 to ensure dimensions are multiples of 8
+2. **Optimized Processing Units**:
+   - Block size reduced from 64x32 to 18x18 (70% reduction)
+   - Warps reduced from 4 to 3 (25% reduction)
    - Pipeline depth reduced to save shared memory
 
 3. **Compilation Fixes**:
    - Added `--expt-relaxed-constexpr` flag to allow certain CUDA code patterns
    - Ensured all dimensions are compatible with CUDA's static shape division requirements
 
-These optimizations allow the kernel to run on consumer GPUs with limited cache while still maintaining compatibility with models that expect the full dimensions (576/512).
+These optimizations allow the kernel to run on consumer GPUs with limited cache while maintaining compatibility with models that expect the full dimensions (576/512).
 
 ## Test Parameters
 

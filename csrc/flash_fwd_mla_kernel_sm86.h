@@ -658,8 +658,9 @@ struct mha_fwd_splitkv_mla<T, Headdim, false> {
                 params.o_ptr = static_cast<T*>(original_o_ptr) + q_start * params.h * params.d_v;
                 params.softmax_lse_ptr = static_cast<float*>(original_softmax_lse_ptr) + q_start * params.h;
 
-                // Run the kernel with smaller dimensions that are multiples of 8
-                using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 2, T, 512>;
+                // Use the full head dimension (576) with block sizes and warp count that avoid shape division errors
+                // 576 = 9 * 64, so we use a block size and warp count that are compatible with this
+                using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 18, 18, 3, T, 512>;
                 run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
             }
 
@@ -670,8 +671,9 @@ struct mha_fwd_splitkv_mla<T, Headdim, false> {
             params.seqlen_q = original_seqlen_q;
         } else {
             // For non-causal attention, we can't chunk safely, so we process the whole sequence
-            // Use dimensions that are multiples of 8 to avoid static shape division errors
-            using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 16, 16, 2, T, 512>;
+            // Use the full head dimension (576) with block sizes and warp count that avoid shape division errors
+            // 576 = 9 * 64, so we use a block size and warp count that are compatible with this
+            using Kernel_traits = Flash_fwd_kernel_traits_mla<576, 18, 18, 3, T, 512>;
             run_flash_splitkv_fwd_mla<Kernel_traits, flash::SharedStorageMLA<Kernel_traits>>(params, stream);
         }
     }
