@@ -123,8 +123,8 @@ def main(torch_dtype):
     random.seed(0)
 
     h_kv = 1
-    # Use reduced dimensions for SM89 to match the kernel implementation
-    d, dv = 288, 256  # Reduced from 576, 512
+    # Use original dimensions to maintain compatibility with models like DeepSeek V3 and R1
+    d, dv = 576, 512
     causal = True
 
     # Use extremely small batch sizes and sequence lengths for SM89 (RTX 40xx) to reduce memory usage

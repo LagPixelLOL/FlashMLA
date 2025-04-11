@@ -33,16 +33,22 @@ Note that sm80, sm86, and sm89 only support bfloat16 data type, while sm90 suppo
 
 ### Memory and Cache Considerations
 
-- sm80 (A100) implementation uses larger block sizes (64x32), more warps (4), and full dimensions (576/512), suitable for datacenter GPUs with large VRAM and cache.
-- sm86 (RTX 30xx) implementation uses extremely small block sizes (16x16), minimal warps (1), and reduced dimensions (288/256) to accommodate consumer GPUs with very limited cache.
-- sm89 (RTX 40xx) implementation also uses extremely small block sizes (16x16), minimal warps (1), and reduced dimensions (288/256), as even these newer consumer GPUs have very limited cache compared to datacenter GPUs.
+- sm80 (A100) implementation uses larger block sizes (64x32) and more warps (4), suitable for datacenter GPUs with large VRAM and cache.
+- sm86 (RTX 30xx) implementation uses small block sizes (16x16) and minimal warps (1) to accommodate consumer GPUs with very limited cache.
+- sm89 (RTX 40xx) implementation also uses small block sizes (16x16) and minimal warps (1), as even these newer consumer GPUs have very limited cache compared to datacenter GPUs.
 
-The test parameters for sm86 and sm89 have also been drastically reduced (smaller batch sizes, shorter sequences, fewer heads, reduced dimensions) to ensure the tests can run on consumer hardware.
+The test parameters for sm86 and sm89 have also been drastically reduced (smaller batch sizes, shorter sequences, fewer heads) to ensure the tests can run on consumer hardware.
 
-### Dimension Differences
+### Chunking for Consumer GPUs
 
-- sm80 and sm90: Head dimension = 576, Output dimension = 512
-- sm86 and sm89: Head dimension = 288, Output dimension = 256 (reduced by half)
+To maintain compatibility with models like DeepSeek V3 and R1 while working within the cache constraints of consumer GPUs, the sm86 and sm89 implementations use a chunking approach:
+
+1. The full head dimension (576) is split into 3 chunks of 192 each
+2. The output dimension (512) is split into 3 chunks of ~170 each
+3. Each chunk is processed separately with smaller block sizes (16x16) and fewer warps (1)
+4. The results are combined at the end
+
+This approach allows the kernel to run on consumer GPUs with limited cache while still maintaining compatibility with models that expect the full dimensions.
 
 ## Test Parameters
 
