@@ -49,8 +49,8 @@ To maintain compatibility with models like DeepSeek V3 and R1 while working with
    - This significantly reduces memory usage for long sequences
 
 2. **Optimized Processing Units**:
-   - Block size reduced from 64x32 to 18x18 (70% reduction)
-   - Warps reduced from 4 to 3 (25% reduction)
+   - Block size reduced from 64x32 to 16x32 (75% reduction)
+   - Warps reduced from 4 to 2 (50% reduction)
    - Pipeline depth reduced to save shared memory
 
 3. **Compilation Fixes**:
