@@ -6,7 +6,7 @@ enable_language(CXX)
 enable_language(CUDA)
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-   set(CMAKE_CUDA_ARCHITECTURES "80")
+   set(CMAKE_CUDA_ARCHITECTURES "80;86;89;90")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -15,9 +15,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -w -g") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -w -g")
 endif()
 
 if (CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
@@ -60,7 +60,7 @@ target_include_directories(csrc
 pybind11_add_module(${PROJECT_NAME} csrc/flash_api.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${TORCH_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE 
+target_link_libraries(${PROJECT_NAME} PRIVATE
     csrc
     ${TORCH_LIBRARIES}
     ${TORCH_PYTHON_LIBRARY}

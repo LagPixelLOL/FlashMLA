@@ -95,6 +95,10 @@ def _write_ninja_file(path,
         flags.append(f'cuda_post_cflags = {" ".join(cuda_post_cflags)}')
         cuda_post_cflags_sm80 = [s if s != 'arch=compute_90a,code=sm_90a' else 'arch=compute_80,code=sm_80' for s in cuda_post_cflags]
         flags.append(f'cuda_post_cflags_sm80 = {" ".join(cuda_post_cflags_sm80)}')
+        cuda_post_cflags_sm86 = [s if s != 'arch=compute_90a,code=sm_90a' else 'arch=compute_86,code=sm_86' for s in cuda_post_cflags]
+        flags.append(f'cuda_post_cflags_sm86 = {" ".join(cuda_post_cflags_sm86)}')
+        cuda_post_cflags_sm89 = [s if s != 'arch=compute_90a,code=sm_90a' else 'arch=compute_89,code=sm_89' for s in cuda_post_cflags]
+        flags.append(f'cuda_post_cflags_sm89 = {" ".join(cuda_post_cflags_sm89)}')
         cuda_post_cflags_sm80_sm90 = cuda_post_cflags + ['-gencode', 'arch=compute_80,code=sm_80']
         flags.append(f'cuda_post_cflags_sm80_sm90 = {" ".join(cuda_post_cflags_sm80_sm90)}')
         cuda_post_cflags_sm100 = [s if s != 'arch=compute_90a,code=sm_90a' else 'arch=compute_100a,code=sm_100a' for s in cuda_post_cflags]
@@ -133,6 +137,12 @@ def _write_ninja_file(path,
         cuda_compile_rule_sm80 = ['rule cuda_compile_sm80'] + cuda_compile_rule[1:] + [
             f'  command = $nvcc_from_env {nvcc_gendeps} $cuda_cflags -c $in -o $out $cuda_post_cflags_sm80'
         ]
+        cuda_compile_rule_sm86 = ['rule cuda_compile_sm86'] + cuda_compile_rule[1:] + [
+            f'  command = $nvcc_from_env {nvcc_gendeps} $cuda_cflags -c $in -o $out $cuda_post_cflags_sm86'
+        ]
+        cuda_compile_rule_sm89 = ['rule cuda_compile_sm89'] + cuda_compile_rule[1:] + [
+            f'  command = $nvcc_from_env {nvcc_gendeps} $cuda_cflags -c $in -o $out $cuda_post_cflags_sm89'
+        ]
         cuda_compile_rule_sm80_sm90 = ['rule cuda_compile_sm80_sm90'] + cuda_compile_rule[1:] + [
             f'  command = $nvcc_from_env {nvcc_gendeps} $cuda_cflags -c $in -o $out $cuda_post_cflags_sm80_sm90'
         ]
@@ -151,6 +161,10 @@ def _write_ninja_file(path,
                 rule = 'cuda_compile'
             elif source_file.endswith('_sm80.cu'):
                 rule = 'cuda_compile_sm80'
+            elif source_file.endswith('_sm86.cu'):
+                rule = 'cuda_compile_sm86'
+            elif source_file.endswith('_sm89.cu'):
+                rule = 'cuda_compile_sm89'
             elif source_file.endswith('_sm100.cu'):
                 rule = 'cuda_compile_sm100'
             else:
@@ -197,6 +211,8 @@ def _write_ninja_file(path,
     if with_cuda:
         blocks.append(cuda_compile_rule)  # type: ignore[possibly-undefined]
         blocks.append(cuda_compile_rule_sm80)  # type: ignore[possibly-undefined]
+        blocks.append(cuda_compile_rule_sm86)  # type: ignore[possibly-undefined]
+        blocks.append(cuda_compile_rule_sm89)  # type: ignore[possibly-undefined]
         blocks.append(cuda_compile_rule_sm80_sm90)  # type: ignore[possibly-undefined]
         blocks.append(cuda_compile_rule_sm100)  # type: ignore[possibly-undefined]
     blocks += [devlink_rule, link_rule, build, devlink, link, default]
@@ -220,6 +236,8 @@ def get_sources():
     sources = [
         "csrc/flash_api.cpp",
         "csrc/flash_fwd_mla_bf16_sm80.cu",
+        "csrc/flash_fwd_mla_bf16_sm86.cu",
+        "csrc/flash_fwd_mla_bf16_sm89.cu",
         "csrc/flash_fwd_mla_bf16_sm90.cu",
         "csrc/flash_fwd_mla_metadata.cu",
     ]
@@ -242,6 +260,12 @@ subprocess.run(["git", "submodule", "update", "--init", "csrc/cutlass"])
 cc_flag = []
 cc_flag.append("-gencode")
 cc_flag.append("arch=compute_90a,code=sm_90a")
+cc_flag.append("-gencode")
+cc_flag.append("arch=compute_89,code=sm_89")
+cc_flag.append("-gencode")
+cc_flag.append("arch=compute_86,code=sm_86")
+cc_flag.append("-gencode")
+cc_flag.append("arch=compute_80,code=sm_80")
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
