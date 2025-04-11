@@ -5,8 +5,9 @@ enable_language(C)
 enable_language(CXX)
 enable_language(CUDA)
 
+# Define separate architecture flags for different source files
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-   set(CMAKE_CUDA_ARCHITECTURES "80;86;89;90")
+    set(CMAKE_CUDA_ARCHITECTURES "80;86;89;90")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -49,7 +50,52 @@ file(GLOB CSRC_HEADERS
     "csrc/*.h"
 )
 
-add_library(csrc SHARED ${CSRC_SOURCES})
+# Create a list of source files for each architecture
+set(CSRC_SOURCES_SM80 "")
+set(CSRC_SOURCES_SM86 "")
+set(CSRC_SOURCES_SM89 "")
+set(CSRC_SOURCES_SM90 "")
+set(CSRC_SOURCES_COMMON "")
+
+# Categorize source files by architecture
+foreach(SOURCE_FILE ${CSRC_SOURCES})
+    get_filename_component(FILE_NAME ${SOURCE_FILE} NAME)
+    if(FILE_NAME MATCHES "_sm80\.cu$")
+        list(APPEND CSRC_SOURCES_SM80 ${SOURCE_FILE})
+    elseif(FILE_NAME MATCHES "_sm86\.cu$")
+        list(APPEND CSRC_SOURCES_SM86 ${SOURCE_FILE})
+    elseif(FILE_NAME MATCHES "_sm89\.cu$")
+        list(APPEND CSRC_SOURCES_SM89 ${SOURCE_FILE})
+    elseif(FILE_NAME MATCHES "_sm90\.cu$")
+        list(APPEND CSRC_SOURCES_SM90 ${SOURCE_FILE})
+    else()
+        list(APPEND CSRC_SOURCES_COMMON ${SOURCE_FILE})
+    endif()
+endforeach()
+
+# Create the library
+add_library(csrc SHARED ${CSRC_SOURCES_COMMON})
+
+# Set architecture-specific flags for each source file
+if(CSRC_SOURCES_SM80)
+    set_source_files_properties(${CSRC_SOURCES_SM80} PROPERTIES COMPILE_FLAGS "-arch=sm_80")
+    target_sources(csrc PRIVATE ${CSRC_SOURCES_SM80})
+endif()
+
+if(CSRC_SOURCES_SM86)
+    set_source_files_properties(${CSRC_SOURCES_SM86} PROPERTIES COMPILE_FLAGS "-arch=sm_86")
+    target_sources(csrc PRIVATE ${CSRC_SOURCES_SM86})
+endif()
+
+if(CSRC_SOURCES_SM89)
+    set_source_files_properties(${CSRC_SOURCES_SM89} PROPERTIES COMPILE_FLAGS "-arch=sm_89")
+    target_sources(csrc PRIVATE ${CSRC_SOURCES_SM89})
+endif()
+
+if(CSRC_SOURCES_SM90)
+    set_source_files_properties(${CSRC_SOURCES_SM90} PROPERTIES COMPILE_FLAGS "-arch=sm_90a")
+    target_sources(csrc PRIVATE ${CSRC_SOURCES_SM90})
+endif()
 set_property(TARGET csrc PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(csrc
